@@ -1,6 +1,14 @@
 ltests/chars.c
+ltests/chars.c	1	NUMBER	INTEGER	0	INT
+ltests/chars.c	1	NUMBER	INTEGER	0	INT
+ltests/chars.c	1	NUMBER	INTEGER	0	INT
 ltests/chars.c	2	IDENT	a
+ltests/chars.c	2	NUMBER	INTEGER	0	INT
 ltests/chars.c	2	IDENT	n
+ltests/chars.c	5	NUMBER	INTEGER	1	INT
+ltests/chars.c	5	NUMBER	INTEGER	8	INT
+ltests/chars.c	5	NUMBER	INTEGER	377	INT
+ltests/chars.c	5	NUMBER	INTEGER	1	INT
 ltests/chars.c	5	IDENT	xaeZ
 ltests/chars.c	6	IDENT	abc
 ltests/chars.c	7	IDENT	AB
@@ -93,28 +101,44 @@ ltests/kw.c	37	_IMAGINARY
 ltests/kw.c	37	;
 ltests/kw.c	38	IDENT	automatic
 ltests/kw.c	38	;
+ltests/kw.c	39	NUMBER	INTEGER	0	INT
 ltests/kw.c	39	IDENT	ident
 ltests/kw.c	39	;
 ltests/num.c
 ltests/num.c	1	+
-ltests/num.c	4	IDENT	L
-ltests/num.c	5	.
+ltests/num.c	1	NUMBER	INTEGER	1	INT
+ltests/num.c	2	NUMBER	INTEGER	0	INT
+ltests/num.c	3	NUMBER	INTEGER	0	INT
+ltests/num.c	4	NUMBER	INTEGER	0	LONG
+ltests/num.c	5	NUMBER	REAL	0.1	DOUBLE
 ltests/num.c	6	-
-ltests/num.c	7	IDENT	U
-ltests/num.c	8	IDENT	LLU
-ltests/num.c	9	IDENT	x1AFL
-ltests/num.c	10	IDENT	x1EZERO001
+ltests/num.c	6	NUMBER	INTEGER	1	INT
+ltests/num.c	7	NUMBER	INTEGER	1	UNSIGNED,INT
+ltests/num.c	8	NUMBER	INTEGER	63	UNSIGNED,LONGLONG
+ltests/num.c	9	NUMBER	INTEGER	431	LONG
+ltests/num.c	10	NUMBER	INTEGER	30	INT
+ltests/num.c	10	IDENT	ZERO001
+ltests/num.c	11	NUMBER	INTEGER	1	INT
 ltests/num.c	11	IDENT	e8f
-ltests/num.c	12	IDENT	x100p
+ltests/num.c	12	NUMBER	INTEGER	256	INT
+ltests/num.c	12	IDENT	p
 ltests/num.c	12	-
-ltests/num.c	13	IDENT	x100e
+ltests/num.c	12	NUMBER	INTEGER	7	INT
+ltests/num.c	13	NUMBER	INTEGER	4110	INT
 ltests/num.c	13	-
-ltests/num.c	14	ELLIPSIS
-ltests/num.c	14	.
+ltests/num.c	13	NUMBER	INTEGER	2	INT
+ltests/num.c	14	NUMBER	REAL	0	DOUBLE
+ltests/num.c	15	NUMBER	INTEGER	7	INT
+ltests/num.c	16	NUMBER	INTEGER	63	INT
+ltests/num.c	16	NUMBER	INTEGER	800	INT
+ltests/num.c	17	NUMBER	INTEGER	15	INT
 ltests/num.c	17	IDENT	e
 ltests/num.c	17	+
+ltests/num.c	17	NUMBER	INTEGER	8	INT
+ltests/num.c	18	NUMBER	INTEGER	15	INT
 ltests/num.c	18	IDENT	f
-ltests/num.c	19	IDENT	L
+ltests/num.c	19	NUMBER	INTEGER	15	LONG
+ltests/num.c	20	NUMBER	INTEGER	15	INT
 ltests/num.c	20	.
 ltests/num.c	20	IDENT	L
 ltests/op.c
