@@ -16,7 +16,7 @@ char *temp;
     fileName = strdup(yytext+strlen("# 0 \""));
     // Remove the last "
     fileName[strlen(fileName)-2]= '\0'; 
-    printf("%s\n", fileName);
+    // printf("%s\n", fileName);
 
     lineNumber = 1;
     }
@@ -144,7 +144,7 @@ _Imaginary  {return _IMAGINARY;}
     return NUMBER;
 }
 
-[1-9][0-9]*[lL][lL]             {
+[1-9][0-9]*[lL][lL]         {   
     yylval.number.value = atoi(yytext);
     yylval.number.type = "INTEGER";
     yylval.number.note = "LONGLONG";
@@ -260,12 +260,73 @@ _Imaginary  {return _IMAGINARY;}
 
     /*Different Type of Float*/
 
-[0-9...]+[\.][0-9...]+          {
+[0-9]*[\.][0-9]*          {
+    // printf("%s 1\n",yytext);
     yylval.number.fValue = atof(yytext);
     yylval.number.type = "REAL";
     yylval.number.note = "DOUBLE";
     return NUMBER;
 }
+
+[0-9]*[\.][0-9]*f        {
+    // printf("%s 2/n",yytext);
+    
+    yylval.number.fValue = atof(yytext);
+    yylval.number.type = "REAL";
+    yylval.number.note = "DOUBLE";
+    return NUMBER;
+}
+
+[0-9]*[\.][0-9]*(f)?[lL]        {
+    // printf("%s 3/n",yytext);
+
+    yylval.number.fValue = atof(yytext);
+    yylval.number.type = "REAL";
+    yylval.number.note = "LONGDOUBLE";
+    return NUMBER;
+}
+
+[0-9]+[eE](\+)?[0-9]+           {
+    // printf("%s 4/n",yytext);
+
+    yylval.number.fValue = atof(yytext);
+    yylval.number.type = "REAL";
+    yylval.number.note = "DOUBLE";
+    return NUMBER;
+}
+
+[0-9]+[eE](\+)?[0-9]+(f)        {
+    // printf("%s 4/n",yytext);
+
+    yylval.number.fValue = atof(yytext);
+    yylval.number.type = "REAL";
+    yylval.number.note = "FLOAT";
+    return NUMBER;
+}
+
+    /*Hex Float Number*/
+[0][xX][0-9a-fA-F]+[pP][+-]?[0-9a-fA-F] {
+    // printf("%s", yytext);
+    
+    yylval.number.fValue = atof(yytext);
+    yylval.number.type = "REAL";
+    yylval.number.note = "DOUBLE";
+    return NUMBER;
+}
+
+    /*String Literals and Characters*/
+["]([^"\\\n]|\\.|\\\n)*["]      {
+    yytext[strlen(yytext) - 1] = '\0';
+    yylval.string_literal = strdup(yytext+1);
+    return STRING;
+}
+
+[uUL]?\'[(\\.).]\'  {
+    yytext[strlen(yytext) - 1] = '\0';
+    yylval.string_literal = strdup(yytext+1);
+    return CHARLIT;
+}
+
 
 
 
@@ -307,6 +368,12 @@ int main(){
                 break;
             case IDENT:
                 printf("%s\t%d\tIDENT\t%s\n", fileName, lineNumber, yylval.string_literal);
+                break;
+            case STRING:
+                printf("%s\t%d\tSTRING\t%s\n", fileName, lineNumber, yylval.string_literal); 
+                break;
+            case CHARLIT:
+                printf("%s\t%d\tCHARLIT\t%s\n", fileName, lineNumber, yylval.string_literal); 
                 break;
             default:
                 break;
