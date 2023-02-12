@@ -3,8 +3,7 @@
 #include "lexer.h"
 
 YYSTYPE yylval;
-int lineNumber = 1;
-char *fileName;
+
 char *temp;
 
 %}
@@ -16,7 +15,6 @@ char *temp;
     fileName = strdup(yytext+strlen("# 0 \""));
     // Remove the last "
     fileName[strlen(fileName)-2]= '\0'; 
-    // printf("%s\n", fileName);
 
     lineNumber = 1;
     }
@@ -317,17 +315,32 @@ _Imaginary  {return _IMAGINARY;}
     /*String Literals and Characters*/
 ["]([^"\\\n]|\\.|\\\n)*["]      {
     yytext[strlen(yytext) - 1] = '\0';
-    yylval.string_literal = strdup(yytext+1);
+    char *temp = strdup(yytext+1);
+    yylval.string_literal = (char *) malloc(MAXSTRING);
+    to_Byte(temp, yylval.string_literal);
     return STRING;
 }
 
-[uUL]?\'[(\\.).]\'  {
-    yytext[strlen(yytext) - 1] = '\0';
-    yylval.string_literal = strdup(yytext+1);
+[uUL]?\'([\\]?.)*\'  {
+    if(yytext[1] =='\\'){
+        if(strlen(yytext) > 4){
+            fprintf(stderr, "%s:%d:Warning:Unsupported multibyte character literal truncated to first byte\n", fileName, lineNumber);
+        }
+        yytext[3] = '\0';
+    }else{
+        if(strlen(yytext) > 3){
+            fprintf(stderr, "%s:%d:Warning:Unsupported multibyte character literal truncated to first byte\n", fileName, lineNumber);
+        }
+        yytext[2] = '\0';
+    }
+    
+    char *temp = strdup(yytext+1);
+
+    yylval.string_literal = (char *) malloc(MAXSTRING);
+    to_Byte(temp, yylval.string_literal);
+
     return CHARLIT;
 }
-
-
 
 
 [ \t]+  {/* Ignore White space*/ }
@@ -341,23 +354,14 @@ int main(){
 
     int t;
     
-    // char a;
-    // t = 0;
-
-    // while(t < 10000){
-    //     a = getchar();
-    //     fputc(a, stdout);
-    //     t++;
-    // }
-
     while(t = yylex()){
 
         switch(t){
             case NUMBER:
                 if(yylval.number.type == "INTEGER"){
-                    printf("%s\t%d\tNUMBER\t%s\t%d\t%s\n", fileName, lineNumber, yylval.number.type, yylval.number.value,yylval.number.note); 
+                    printf("%s\t%d\tNUMBER\t%s\t%lld\t%s\n", fileName, lineNumber, yylval.number.type, yylval.number.value,yylval.number.note); 
                 }else if(yylval.number.type == "REAL"){
-                    printf("%s\t%d\tNUMBER\t%s\t%g\t%s\n", fileName, lineNumber, yylval.number.type, yylval.number.fValue,yylval.number.note); 
+                    printf("%s\t%d\tNUMBER\t%s\t%Lg\t%s\n", fileName, lineNumber, yylval.number.type, yylval.number.fValue,yylval.number.note); 
                 }
                 break;
             case INDSEL ... _IMAGINARY:
@@ -370,10 +374,14 @@ int main(){
                 printf("%s\t%d\tIDENT\t%s\n", fileName, lineNumber, yylval.string_literal);
                 break;
             case STRING:
-                printf("%s\t%d\tSTRING\t%s\n", fileName, lineNumber, yylval.string_literal); 
+                printf("%s\t%d\tSTRING\t", fileName, lineNumber);
+                printBytes(yylval.string_literal);
+                printf("\n");
                 break;
             case CHARLIT:
-                printf("%s\t%d\tCHARLIT\t%s\n", fileName, lineNumber, yylval.string_literal); 
+                printf("%s\t%d\tCHARLIT\t", fileName, lineNumber);
+                printBytes(yylval.string_literal);
+                printf("\n");
                 break;
             default:
                 break;
