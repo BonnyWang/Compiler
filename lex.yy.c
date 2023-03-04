@@ -659,8 +659,313 @@ YYSTYPE yylval;
 
 char *temp;
 
-#line 663 "lex.yy.c"
-#line 664 "lex.yy.c"
+// Define userfule variables
+char *numberNotesText[] = {
+	"INT",
+	"UNSIGNED,INT",
+	"LONG",
+	"LONGLONG",
+	"UNSIGNED,LONG",
+	"UNSIGNED,LONGLONG",
+	"DOUBLE",
+	"LONGDOUBLE",
+	"FLOAT",
+
+};
+
+char escapeSimpleSequence[] = {
+	'a',
+	'b',
+	'e',
+	'f',
+	'n',
+	'r',
+	't',
+	'v',
+	'\\',
+	'\'',
+	'\"',
+	'\?',
+};
+
+char escapeSimpleChar[] = {
+	'\a',
+	'\b',
+	'\e',
+	'\f',
+	'\n',
+	'\r',
+	'\t',
+	'\v',
+	'\\',
+	'\'',
+	'\"',
+	'\?',
+};
+
+
+char *escapeSimpleHex[] = {
+	"0x07",
+	"0x08",
+	"0x1B",
+	"0x0C",
+	"0x0A",
+	"0x0D",
+	"0x09",
+	"0x0B",
+	"0x5C",
+	"0x27",
+	"0x22",
+	"0x3F",
+};
+
+char *enum_TokenName[] = {
+    "IDENT",
+	"CHARLIT",
+	"STRING",
+	"NUMBER",
+	"INDSEL",
+	"PLUSPLUS",
+	"MINUSMINUS",
+	"SHL",
+	"SHR",
+	"LTEQ",
+	"GTEQ",
+	"EQEQ",
+	"NOTEQ",
+	"LOGAND",
+	"LOGOR",
+	"ELLIPSIS",
+	"TIMESEQ",
+	"DIVEQ",
+	"MODEQ",
+	"PLUSEQ",
+	"MINUSEQ",
+	"SHLEQ",
+	"SHREQ",
+	"ANDEQ",
+	"OREQ",
+	"XOREQ",
+	"AUTO",
+	"BREAK",
+	"CASE",
+	"CHAR",
+	"CONST",
+	"CONTINUE",
+	"DEFAULT",
+	"DO",
+	"DOUBLE",
+	"ELSE",
+	"ENUM",
+	"EXTERN",
+	"FLOAT",
+	"FOR",
+	"GOTO",
+	"IF",
+	"INLINE",
+	"INT",
+	"LONG",
+	"REGISTER",
+	"RESTRICT",
+	"RETURN",
+	"SHORT",
+	"SIGNED",
+	"SIZEOF",
+	"STATIC",
+	"STRUCT",
+	"SWITCH",
+	"TYPEDEF",
+	"UNION",
+	"UNSIGNED",
+	"VOID",
+	"VOLATILE",
+	"WHILE",
+	"_BOOL",
+	"_COMPLEX",
+	"_IMAGINARY"
+};
+
+void to_Byte(char* input, BYTE* output)
+{
+	// control input and output index
+    int i,j;
+    int o;
+    
+	i = 0;
+	o = 0;
+
+	j = 0;
+    
+    while(input[i] != '\0'){
+		if((input[i] == '\\') && (input[i+1]!= '\0')){
+			int e;
+			int validEscape = 0;
+			for(e = 0; e < ESCAPENUMBER ; e++){
+
+				if(input[i+1] == escapeSimpleSequence[e]){
+					// To escape these characters
+					if((input[i+1] == '\'')||(input[i+1] == '\\')||(input[i+1] == '\"')){
+
+						output[o] = '\\';
+						o++;
+					}
+
+
+					output[o] = strtoull(escapeSimpleHex[e], NULL, 16);
+
+					o++;
+					i = i +2;
+					validEscape = 1;
+					break;
+				}
+			}
+
+			if(validEscape == 0){
+				// Convert Hexidecimal
+				if(input[i+1] == 'x'){
+					// First check if it is valid ascii from the nearest 2 digit
+					char *tempHex = (char *) malloc(MAXSTRING);
+					tempHex = strdup(input + i);
+					tempHex[0] = '0';
+					tempHex[4] = '\0';
+					int tempChar = strtoull(tempHex, NULL, 16);
+					if((tempChar >=0) && (tempChar < 127)){
+						output[o] = tempChar;
+						i = i + 4;
+						o++;
+					}else{
+						// if not ascii convert it to octal number
+						tempHex = strdup(input + i);
+						i++;
+						j = 2;
+						while(tempHex[j] != '\0'){
+							if (((tempHex[j] >= '0') && (tempHex[j] <= '9'))
+							|| ((tempHex[j] >= 'a') &&
+							(tempHex[j] <= 'f'))
+							|| ((tempHex[j] >= 'A') && (tempHex[j] <= 'F'))){
+								j++;
+							}else{
+								tempHex[j] = '\0';
+								break;
+							}
+						}
+
+						output[o] = '\\';
+						o++;
+
+						if (j >4){
+
+							output[o++] = '3';
+							output[o++] = '7';
+							output[o++] = '7';
+
+							fprintf(stderr, "%s:%d:Warning:Hex escape sequence %s out of range\n", fileName, lineNumber, tempHex);
+						}else{
+							tempHex[0] = '0';
+							int tempDecimal = strtoull(tempHex, NULL, 16);
+							char *tempOctal;
+							tempOctal = (char *) malloc(MAXSTRING);
+
+							int octalIndex = 0;
+							int reverseIndex;
+							
+							for(octalIndex = 0; tempDecimal > 0; octalIndex++)
+							{
+								tempOctal[octalIndex] = tempDecimal % 8 + '0';
+								tempDecimal = tempDecimal / 8;
+							}
+
+							// reverse the order of digits
+
+							for(reverseIndex = octalIndex - 1; reverseIndex >= 0; reverseIndex--){
+								// printf("%c",tempOctal[reverseIndex]);
+								output[o] = tempOctal[reverseIndex];
+								o++;
+							}
+							// printf("%d", tempChar);
+							
+						}
+						i = i + j - 1;
+					}
+
+				}else if((input[i+1]>='0') && (input[i+1]<'8')){
+					// check for octal
+					if((input[i+2]>='0') && (input[i+2]<'8')){
+						if((input[i+3]>='0') && (input[i+3]<'8')){
+							output[o++] = input[i++];
+							output[o++] = input[i++];
+							output[o++] = input[i++];
+							output[o++] = input[i++];
+						}else{
+							output[o++] = input[i++];
+							output[o++] = '0';
+							output[o++] = input[i++];
+							output[o++] = input[i++];
+						}
+
+					}else{
+						if((input[i+1]>='1') && (input[i+1]<'8')){
+							output[o++] = input[i++];
+							output[o++] = '0';
+							output[o++] = '0';
+							output[o++] = input[i++];
+						}else{
+							output[o++] = input[i++];
+						}
+					}
+				}else{
+
+					output[o] = input[i];
+					// printf("%c\n", output[i]);
+					i++;
+					o++;
+				}
+			}
+
+		}else{
+			output[o] = input[i];
+			// printf("%c\n", output[i]);
+			i++;
+			o++;
+
+		}
+    }
+
+	output[o] = '\0';
+}
+
+void printBytes(BYTE* input){
+	int i = 0;
+	int e;
+	int validEscape;
+
+	while(input[i] != '\0'){
+		validEscape = 0;
+		for(e = 0; e <ESCAPENUMBER ; e++){
+			if(input[i] == strtoull(escapeSimpleHex[e], NULL,16)){
+
+				if(isprint(input[i])){
+					printf("%c", input[i]);
+				}else{
+					printf("\\");
+					printf("%c",escapeSimpleSequence[e]);
+				}
+				validEscape = 1;
+				break;
+			}
+		}
+
+		if(validEscape == 0){
+			printf("%c", input[i]);
+		}
+
+		i++;
+	}
+
+}
+
+#line 968 "lex.yy.c"
+#line 969 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -877,12 +1182,12 @@ YY_DECL
 		}
 
 	{
-#line 11 "lexer.l"
+#line 316 "lexer.l"
 
-#line 13 "lexer.l"
+#line 318 "lexer.l"
     /*Get the file name here and ignore other preprossed information and reset lineNumber*/
 
-#line 886 "lex.yy.c"
+#line 1191 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -942,7 +1247,7 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 15 "lexer.l"
+#line 320 "lexer.l"
 {
     fileName = strdup(yytext+strlen("# 0 \""));
     // Remove the last "
@@ -954,430 +1259,430 @@ YY_RULE_SETUP
 case 2:
 /* rule 2 can match eol */
 YY_RULE_SETUP
-#line 23 "lexer.l"
+#line 328 "lexer.l"
 {}
 	YY_BREAK
 /*Specify Keywords Tokens*/
 case 3:
 YY_RULE_SETUP
-#line 27 "lexer.l"
+#line 332 "lexer.l"
 {return INDSEL;}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 28 "lexer.l"
+#line 333 "lexer.l"
 {return PLUSPLUS;}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 29 "lexer.l"
+#line 334 "lexer.l"
 {return MINUSMINUS;}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 30 "lexer.l"
+#line 335 "lexer.l"
 {return SHL;}
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 31 "lexer.l"
+#line 336 "lexer.l"
 {return SHR;}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 32 "lexer.l"
+#line 337 "lexer.l"
 {return LTEQ;}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 33 "lexer.l"
+#line 338 "lexer.l"
 {return GTEQ;}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 34 "lexer.l"
+#line 339 "lexer.l"
 {return EQEQ;}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 35 "lexer.l"
+#line 340 "lexer.l"
 {return NOTEQ;}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 36 "lexer.l"
+#line 341 "lexer.l"
 {return LOGAND;}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 37 "lexer.l"
+#line 342 "lexer.l"
 {return LOGOR;}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 38 "lexer.l"
+#line 343 "lexer.l"
 {return ELLIPSIS;}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 39 "lexer.l"
+#line 344 "lexer.l"
 {return TIMESEQ;}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 40 "lexer.l"
+#line 345 "lexer.l"
 {return DIVEQ;}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 41 "lexer.l"
+#line 346 "lexer.l"
 {return MODEQ;}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 42 "lexer.l"
+#line 347 "lexer.l"
 {return PLUSEQ;}
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 43 "lexer.l"
+#line 348 "lexer.l"
 {return MINUSEQ;}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 44 "lexer.l"
+#line 349 "lexer.l"
 {return SHLEQ;}
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 45 "lexer.l"
+#line 350 "lexer.l"
 {return SHREQ;}
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 46 "lexer.l"
+#line 351 "lexer.l"
 {return ANDEQ;}
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 47 "lexer.l"
+#line 352 "lexer.l"
 {return OREQ;}
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 48 "lexer.l"
+#line 353 "lexer.l"
 {return XOREQ;}
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 49 "lexer.l"
+#line 354 "lexer.l"
 {return AUTO;}
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 50 "lexer.l"
+#line 355 "lexer.l"
 {return BREAK;}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 51 "lexer.l"
+#line 356 "lexer.l"
 {return CASE;}
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 52 "lexer.l"
+#line 357 "lexer.l"
 {return CHAR;}
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 53 "lexer.l"
+#line 358 "lexer.l"
 {return CONST;}
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 54 "lexer.l"
+#line 359 "lexer.l"
 {return CONTINUE;}
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 55 "lexer.l"
+#line 360 "lexer.l"
 {return DEFAULT;}
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 56 "lexer.l"
+#line 361 "lexer.l"
 {return DO;}
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 57 "lexer.l"
+#line 362 "lexer.l"
 {return DOUBLE;}
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 58 "lexer.l"
+#line 363 "lexer.l"
 {return ELSE;}
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 59 "lexer.l"
+#line 364 "lexer.l"
 {return ENUM;}
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 60 "lexer.l"
+#line 365 "lexer.l"
 {return EXTERN;}
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 61 "lexer.l"
+#line 366 "lexer.l"
 {return FLOAT;}
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 62 "lexer.l"
+#line 367 "lexer.l"
 {return FOR;}
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 63 "lexer.l"
+#line 368 "lexer.l"
 {return GOTO;}
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 64 "lexer.l"
+#line 369 "lexer.l"
 {return IF;}
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 65 "lexer.l"
+#line 370 "lexer.l"
 {return INLINE;}
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 66 "lexer.l"
+#line 371 "lexer.l"
 {return INT;}
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 67 "lexer.l"
+#line 372 "lexer.l"
 {return LONG;}
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 68 "lexer.l"
+#line 373 "lexer.l"
 {return REGISTER;}
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 69 "lexer.l"
+#line 374 "lexer.l"
 {return RESTRICT;}
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 70 "lexer.l"
+#line 375 "lexer.l"
 {return RETURN;}
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 71 "lexer.l"
+#line 376 "lexer.l"
 {return SHORT;}
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 72 "lexer.l"
+#line 377 "lexer.l"
 {return SIGNED;}
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 73 "lexer.l"
+#line 378 "lexer.l"
 {return SIZEOF;}
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 74 "lexer.l"
+#line 379 "lexer.l"
 {return STATIC;}
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 75 "lexer.l"
+#line 380 "lexer.l"
 {return STRUCT;}
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 76 "lexer.l"
+#line 381 "lexer.l"
 {return SWITCH;}
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 77 "lexer.l"
+#line 382 "lexer.l"
 {return TYPEDEF;}
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 78 "lexer.l"
+#line 383 "lexer.l"
 {return UNION;}
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 79 "lexer.l"
+#line 384 "lexer.l"
 {return UNSIGNED;}
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 80 "lexer.l"
+#line 385 "lexer.l"
 {return VOID;}
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 81 "lexer.l"
+#line 386 "lexer.l"
 {return VOLATILE;}
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 82 "lexer.l"
+#line 387 "lexer.l"
 {return WHILE;}
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 83 "lexer.l"
+#line 388 "lexer.l"
 {return _BOOL;}
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 84 "lexer.l"
+#line 389 "lexer.l"
 {return _COMPLEX;}
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 85 "lexer.l"
+#line 390 "lexer.l"
 {return _IMAGINARY;}
 	YY_BREAK
 /*Single Char Operators*/
 case 62:
 YY_RULE_SETUP
-#line 89 "lexer.l"
+#line 394 "lexer.l"
 {return '+';}
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 90 "lexer.l"
+#line 395 "lexer.l"
 {return '-';}
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 91 "lexer.l"
+#line 396 "lexer.l"
 {return '*';}
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 92 "lexer.l"
+#line 397 "lexer.l"
 {return '(';}
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 93 "lexer.l"
+#line 398 "lexer.l"
 {return ')';}
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 94 "lexer.l"
+#line 399 "lexer.l"
 {return '[';}
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 95 "lexer.l"
+#line 400 "lexer.l"
 {return ']';}
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 96 "lexer.l"
+#line 401 "lexer.l"
 {return '{';}
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 97 "lexer.l"
+#line 402 "lexer.l"
 {return '}';}
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 98 "lexer.l"
+#line 403 "lexer.l"
 {return '|';}
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 99 "lexer.l"
+#line 404 "lexer.l"
 {return '.';}
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 100 "lexer.l"
+#line 405 "lexer.l"
 {return '&';}
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 101 "lexer.l"
+#line 406 "lexer.l"
 {return '~';}
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 102 "lexer.l"
+#line 407 "lexer.l"
 {return '/';}
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 103 "lexer.l"
+#line 408 "lexer.l"
 {return '!';}
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 104 "lexer.l"
+#line 409 "lexer.l"
 {return '%';}
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 105 "lexer.l"
+#line 410 "lexer.l"
 {return '<';}
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 106 "lexer.l"
+#line 411 "lexer.l"
 {return '>';}
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 107 "lexer.l"
+#line 412 "lexer.l"
 {return '^';}
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 108 "lexer.l"
+#line 413 "lexer.l"
 {return '?';}
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 109 "lexer.l"
+#line 414 "lexer.l"
 {return ':';}
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 110 "lexer.l"
+#line 415 "lexer.l"
 {return ';';}
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 111 "lexer.l"
+#line 416 "lexer.l"
 {return ',';}
 	YY_BREAK
 case 85:
 YY_RULE_SETUP
-#line 112 "lexer.l"
+#line 417 "lexer.l"
 {return '=';}
 	YY_BREAK
 /*Specify Identifiers*/
 case 86:
 YY_RULE_SETUP
-#line 115 "lexer.l"
+#line 420 "lexer.l"
 {
     yylval.string_literal = strdup(yytext);
     return IDENT;
@@ -1388,266 +1693,266 @@ YY_RULE_SETUP
 /*Decimal Integer*/
 case 87:
 YY_RULE_SETUP
-#line 126 "lexer.l"
+#line 431 "lexer.l"
 {
     yylval.number.value = atoi(yytext);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "INT";
+    yylval.number.type = INTEGER;
+    yylval.number.note = SINT;
     return NUMBER;
 }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 132 "lexer.l"
+#line 437 "lexer.l"
 {
     yylval.number.value = atoi(yytext);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "UNSIGNED,INT";
+    yylval.number.type = INTEGER;
+    yylval.number.note = UINT;
     return NUMBER;
 }
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
-#line 139 "lexer.l"
+#line 444 "lexer.l"
 {
     yylval.number.value = atoi(yytext);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "LONG";
+    yylval.number.type = INTEGER;
+    yylval.number.note = L;
     return NUMBER;
 }
 	YY_BREAK
 case 90:
 YY_RULE_SETUP
-#line 146 "lexer.l"
+#line 451 "lexer.l"
 {   
     yylval.number.value = atoi(yytext);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "LONGLONG";
+    yylval.number.type = INTEGER;
+    yylval.number.note = LL;
     return NUMBER;
 }
 	YY_BREAK
 case 91:
 YY_RULE_SETUP
-#line 152 "lexer.l"
+#line 457 "lexer.l"
 {
     yylval.number.value = atoi(yytext);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "UNSIGNED,LONG";
+    yylval.number.type = INTEGER;
+    yylval.number.note = UL;
     return NUMBER;
 }
 	YY_BREAK
 case 92:
 YY_RULE_SETUP
-#line 158 "lexer.l"
+#line 463 "lexer.l"
 {
     yylval.number.value = atoi(yytext);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "UNSIGNED,LONGLONG";
+    yylval.number.type = INTEGER;
+    yylval.number.note = ULL;
     return NUMBER;
 }
 	YY_BREAK
 /*Hexidecimal*/     
 case 93:
 YY_RULE_SETUP
-#line 167 "lexer.l"
+#line 472 "lexer.l"
 {
-    yylval.number.value = HexTODecimal(yytext);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "INT";
+    yylval.number.value = strtoull(yytext, NULL,16);
+    yylval.number.type = INTEGER;
+    yylval.number.note = SINT;
     return NUMBER;
 }
 	YY_BREAK
 case 94:
 YY_RULE_SETUP
-#line 173 "lexer.l"
+#line 478 "lexer.l"
 {
     temp = strdup(yytext);
     temp[strlen(temp)-1] = '\0';
-    yylval.number.value = HexTODecimal(temp);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "UNSIGNED,INT";
+    yylval.number.value = strtoull(yytext, NULL,16);
+    yylval.number.type = INTEGER;
+    yylval.number.note = UINT;
     return NUMBER;
 }
 	YY_BREAK
 case 95:
 YY_RULE_SETUP
-#line 182 "lexer.l"
+#line 487 "lexer.l"
 {
     temp = strdup(yytext);
     temp[strlen(temp)-2] = '\0';
-    yylval.number.value = HexTODecimal(temp);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "LONGLONG";
+    yylval.number.value = strtoull(yytext, NULL,16);
+    yylval.number.type = INTEGER;
+    yylval.number.note = LL;
     return NUMBER;
 }
 	YY_BREAK
 case 96:
 YY_RULE_SETUP
-#line 191 "lexer.l"
+#line 496 "lexer.l"
 {
     temp = strdup(yytext);
     temp[strlen(temp)-1] = '\0';
-    yylval.number.value = HexTODecimal(temp);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "LONG";
+    yylval.number.value = strtoull(yytext, NULL,16);
+    yylval.number.type = INTEGER;
+    yylval.number.note = L;
     return NUMBER;
 }
 	YY_BREAK
 case 97:
 YY_RULE_SETUP
-#line 200 "lexer.l"
+#line 505 "lexer.l"
 {
     temp = strdup(yytext);
     temp[strlen(temp)-2] = '\0';
-    yylval.number.value = HexTODecimal(temp);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "UNSIGNED,LONG";
+    yylval.number.value = strtoull(yytext, NULL,16);
+    yylval.number.type = INTEGER;
+    yylval.number.note = UL;
     return NUMBER;
 }
 	YY_BREAK
 case 98:
 YY_RULE_SETUP
-#line 208 "lexer.l"
+#line 513 "lexer.l"
 {
     temp = strdup(yytext);
     temp[strlen(temp)-3] = '\0';
-    yylval.number.value = HexTODecimal(temp);
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "UNSIGNED,LONGLONG";
+    yylval.number.value = strtoull(yytext, NULL,16);
+    yylval.number.type = INTEGER;
+    yylval.number.note = ULL;
     return NUMBER;
 }
 	YY_BREAK
 /*Octal Constant*/
 case 99:
 YY_RULE_SETUP
-#line 219 "lexer.l"
+#line 524 "lexer.l"
 {
-    yylval.number.value = OctalToDecimal(atoi(yytext));
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "INT";
+    yylval.number.value = strtoull(yytext, NULL,8);
+    yylval.number.type = INTEGER;
+    yylval.number.note = SINT;
     return NUMBER;
 }
 	YY_BREAK
 case 100:
 YY_RULE_SETUP
-#line 225 "lexer.l"
+#line 530 "lexer.l"
 {
-    yylval.number.value = OctalToDecimal(atoi(yytext));
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "UNSIGNED,INT";
+    yylval.number.value = strtoull(yytext, NULL,8);
+    yylval.number.type = INTEGER;
+    yylval.number.note = UINT;
     return NUMBER;
 }
 	YY_BREAK
 case 101:
 YY_RULE_SETUP
-#line 232 "lexer.l"
+#line 537 "lexer.l"
 {
-    yylval.number.value = OctalToDecimal(atoi(yytext));
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "LONGLONG";
+    yylval.number.value = strtoull(yytext, NULL,8);
+    yylval.number.type = INTEGER;
+    yylval.number.note = LL;
     return NUMBER;
 }
 	YY_BREAK
 case 102:
 YY_RULE_SETUP
-#line 239 "lexer.l"
+#line 544 "lexer.l"
 {
-    yylval.number.value = OctalToDecimal(atoi(yytext));
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "LONG";
+    yylval.number.value = strtoull(yytext, NULL,8);
+    yylval.number.type = INTEGER;
+    yylval.number.note = L;
     return NUMBER;
 }
 	YY_BREAK
 case 103:
 YY_RULE_SETUP
-#line 246 "lexer.l"
+#line 551 "lexer.l"
 {
-    yylval.number.value = OctalToDecimal(atoi(yytext));
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "UNSIGNED,LONG";
+    yylval.number.value = strtoull(yytext, NULL,8);
+    yylval.number.type = INTEGER;
+    yylval.number.note = UL;
     return NUMBER;
 }
 	YY_BREAK
 case 104:
 YY_RULE_SETUP
-#line 253 "lexer.l"
+#line 558 "lexer.l"
 {
-    yylval.number.value = OctalToDecimal(atoi(yytext));
-    yylval.number.type = "INTEGER";
-    yylval.number.note = "UNSIGNED,LONGLONG";
+    yylval.number.value = strtoull(yytext, NULL,8);
+    yylval.number.type = INTEGER;
+    yylval.number.note = ULL;
     return NUMBER;
 }
 	YY_BREAK
 /*Different Type of Float*/
 case 105:
 YY_RULE_SETUP
-#line 262 "lexer.l"
+#line 567 "lexer.l"
 {
     // printf("%s 1\n",yytext);
-    yylval.number.fValue = atof(yytext);
-    yylval.number.type = "REAL";
-    yylval.number.note = "DOUBLE";
+    yylval.number.fValue = strtold(yytext, NULL);
+    yylval.number.type =REAL;
+    yylval.number.note = D;
     return NUMBER;
 }
 	YY_BREAK
 case 106:
 YY_RULE_SETUP
-#line 270 "lexer.l"
+#line 575 "lexer.l"
 {
     // printf("%s 2/n",yytext);
     
-    yylval.number.fValue = atof(yytext);
-    yylval.number.type = "REAL";
-    yylval.number.note = "DOUBLE";
+    yylval.number.fValue = strtold(yytext, NULL);
+    yylval.number.type =REAL;
+    yylval.number.note = D;
     return NUMBER;
 }
 	YY_BREAK
 case 107:
 YY_RULE_SETUP
-#line 279 "lexer.l"
+#line 584 "lexer.l"
 {
     // printf("%s 3/n",yytext);
 
-    yylval.number.fValue = atof(yytext);
-    yylval.number.type = "REAL";
-    yylval.number.note = "LONGDOUBLE";
+    yylval.number.fValue = strtold(yytext, NULL);
+    yylval.number.type =REAL;
+    yylval.number.note = LD;
     return NUMBER;
 }
 	YY_BREAK
 case 108:
 YY_RULE_SETUP
-#line 288 "lexer.l"
+#line 593 "lexer.l"
 {
     // printf("%s 4/n",yytext);
 
-    yylval.number.fValue = atof(yytext);
-    yylval.number.type = "REAL";
-    yylval.number.note = "DOUBLE";
+    yylval.number.fValue = strtold(yytext, NULL);
+    yylval.number.type =REAL;
+    yylval.number.note = D;
     return NUMBER;
 }
 	YY_BREAK
 case 109:
 YY_RULE_SETUP
-#line 297 "lexer.l"
+#line 602 "lexer.l"
 {
     // printf("%s 4/n",yytext);
 
-    yylval.number.fValue = atof(yytext);
-    yylval.number.type = "REAL";
-    yylval.number.note = "FLOAT";
+    yylval.number.fValue = strtold(yytext, NULL);
+    yylval.number.type =REAL;
+    yylval.number.note = F;
     return NUMBER;
 }
 	YY_BREAK
 /*Hex Float Number*/
 case 110:
 YY_RULE_SETUP
-#line 307 "lexer.l"
+#line 612 "lexer.l"
 {
     // printf("%s", yytext);
     
-    yylval.number.fValue = atof(yytext);
-    yylval.number.type = "REAL";
-    yylval.number.note = "DOUBLE";
+    yylval.number.fValue = strtold(yytext, NULL);
+    yylval.number.type =REAL;
+    yylval.number.note = D;
     return NUMBER;
 }
 	YY_BREAK
@@ -1655,7 +1960,7 @@ YY_RULE_SETUP
 case 111:
 /* rule 111 can match eol */
 YY_RULE_SETUP
-#line 317 "lexer.l"
+#line 622 "lexer.l"
 {
     yytext[strlen(yytext) - 1] = '\0';
     char *temp = strdup(yytext+1);
@@ -1666,7 +1971,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 112:
 YY_RULE_SETUP
-#line 325 "lexer.l"
+#line 630 "lexer.l"
 {
     if(yytext[1] =='\\'){
         if(strlen(yytext) > 4){
@@ -1690,27 +1995,27 @@ YY_RULE_SETUP
 	YY_BREAK
 case 113:
 YY_RULE_SETUP
-#line 347 "lexer.l"
+#line 652 "lexer.l"
 {/* Ignore White space*/ }
 	YY_BREAK
 case 114:
 /* rule 114 can match eol */
 YY_RULE_SETUP
-#line 348 "lexer.l"
+#line 653 "lexer.l"
 {// To keep track of the lineNumbers
         lineNumber++;}
 	YY_BREAK
 case 115:
 YY_RULE_SETUP
-#line 350 "lexer.l"
+#line 655 "lexer.l"
 {fprintf(stderr,"Error: unrecognized character %s\n",yytext);}
 	YY_BREAK
 case 116:
 YY_RULE_SETUP
-#line 352 "lexer.l"
+#line 657 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 1714 "lex.yy.c"
+#line 2019 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2715,7 +3020,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 352 "lexer.l"
+#line 657 "lexer.l"
 
 
 int main(){
@@ -2726,10 +3031,10 @@ int main(){
 
         switch(t){
             case NUMBER:
-                if(yylval.number.type == "INTEGER"){
-                    printf("%s\t%d\tNUMBER\t%s\t%lld\t%s\n", fileName, lineNumber, yylval.number.type, yylval.number.value,yylval.number.note); 
-                }else if(yylval.number.type == "REAL"){
-                    printf("%s\t%d\tNUMBER\t%s\t%Lg\t%s\n", fileName, lineNumber, yylval.number.type, yylval.number.fValue,yylval.number.note); 
+                if(yylval.number.type == INTEGER){
+                    printf("%s\t%d\tNUMBER\tINTEGER\t%lld\t%s\n", fileName, lineNumber, yylval.number.value,numberNotesText[yylval.number.note]); 
+                }else if(yylval.number.type ==REAL){
+                    printf("%s\t%d\tNUMBER\tREAL\t%Lg\t%s\n", fileName, lineNumber, yylval.number.fValue, numberNotesText[yylval.number.note]); 
                 }
                 break;
             case INDSEL ... _IMAGINARY:
