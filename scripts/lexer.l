@@ -1,10 +1,15 @@
-%option noyywrap
+%option noinput nounput noyywrap nodefault
 %{
-#include "lexer.h"
+#include "./lexer.h"
+#include "./parser.tab.h"
 
-YYSTYPE yylval;
+
+// YYSTYPE yylval;
 
 char *temp;
+
+int lineNumber;
+char *fileName;
 
 // Define userfule variables
 char *numberNotesText[] = {
@@ -66,71 +71,71 @@ char *escapeSimpleHex[] = {
 	"0x3F",
 };
 
-char *enum_TokenName[] = {
-    "IDENT",
-	"CHARLIT",
-	"STRING",
-	"NUMBER",
-	"INDSEL",
-	"PLUSPLUS",
-	"MINUSMINUS",
-	"SHL",
-	"SHR",
-	"LTEQ",
-	"GTEQ",
-	"EQEQ",
-	"NOTEQ",
-	"LOGAND",
-	"LOGOR",
-	"ELLIPSIS",
-	"TIMESEQ",
-	"DIVEQ",
-	"MODEQ",
-	"PLUSEQ",
-	"MINUSEQ",
-	"SHLEQ",
-	"SHREQ",
-	"ANDEQ",
-	"OREQ",
-	"XOREQ",
-	"AUTO",
-	"BREAK",
-	"CASE",
-	"CHAR",
-	"CONST",
-	"CONTINUE",
-	"DEFAULT",
-	"DO",
-	"DOUBLE",
-	"ELSE",
-	"ENUM",
-	"EXTERN",
-	"FLOAT",
-	"FOR",
-	"GOTO",
-	"IF",
-	"INLINE",
-	"INT",
-	"LONG",
-	"REGISTER",
-	"RESTRICT",
-	"RETURN",
-	"SHORT",
-	"SIGNED",
-	"SIZEOF",
-	"STATIC",
-	"STRUCT",
-	"SWITCH",
-	"TYPEDEF",
-	"UNION",
-	"UNSIGNED",
-	"VOID",
-	"VOLATILE",
-	"WHILE",
-	"_BOOL",
-	"_COMPLEX",
-	"_IMAGINARY"
-};
+// char *enum_TokenName[] = {
+//     "IDENT",
+// 	"CHARLIT",
+// 	"STRING",
+// 	"NUMBER",
+// 	"INDSEL",
+// 	"PLUSPLUS",
+// 	"MINUSMINUS",
+// 	"SHL",
+// 	"SHR",
+// 	"LTEQ",
+// 	"GTEQ",
+// 	"EQEQ",
+// 	"NOTEQ",
+// 	"LOGAND",
+// 	"LOGOR",
+// 	"ELLIPSIS",
+// 	"TIMESEQ",
+// 	"DIVEQ",
+// 	"MODEQ",
+// 	"PLUSEQ",
+// 	"MINUSEQ",
+// 	"SHLEQ",
+// 	"SHREQ",
+// 	"ANDEQ",
+// 	"OREQ",
+// 	"XOREQ",
+// 	"AUTO",
+// 	"BREAK",
+// 	"CASE",
+// 	"CHAR",
+// 	"CONST",
+// 	"CONTINUE",
+// 	"DEFAULT",
+// 	"DO",
+// 	"DOUBLE",
+// 	"ELSE",
+// 	"ENUM",
+// 	"EXTERN",
+// 	"FLOAT",
+// 	"FOR",
+// 	"GOTO",
+// 	"IF",
+// 	"INLINE",
+// 	"INT",
+// 	"LONG",
+// 	"REGISTER",
+// 	"RESTRICT",
+// 	"RETURN",
+// 	"SHORT",
+// 	"SIGNED",
+// 	"SIZEOF",
+// 	"STATIC",
+// 	"STRUCT",
+// 	"SWITCH",
+// 	"TYPEDEF",
+// 	"UNION",
+// 	"UNSIGNED",
+// 	"VOID",
+// 	"VOLATILE",
+// 	"WHILE",
+// 	"_BOOL",
+// 	"_COMPLEX",
+// 	"_IMAGINARY"
+// };
 
 void to_Byte(char* input, BYTE* output)
 {
@@ -317,7 +322,7 @@ void printBytes(BYTE* input){
     /*Get the file name here and ignore other preprossed information and reset lineNumber*/
 
 "# 0 \"ltests/".*\n {
-    fileName = strdup(yytext+strlen("# 0 \""));
+    fileName = strdup(yytext+strlen("# 1 \""));
     // Remove the last "
     fileName[strlen(fileName)-2]= '\0'; 
 
@@ -417,7 +422,7 @@ _Imaginary  {return _IMAGINARY;}
 
     /*Specify Identifiers*/
 [a-zA-Z_][a-zA-Z0-9_]*    {
-    yylval.string_literal = strdup(yytext);
+    yylval.ident = strdup(yytext);
     return IDENT;
     }
     
@@ -655,43 +660,43 @@ _Imaginary  {return _IMAGINARY;}
 
 %%
 
-int main(){
+// int main(){
 
-    int t;
+//     int t;
     
-    while(t = yylex()){
+//     while(t = yylex()){
 
-        switch(t){
-            case NUMBER:
-                if(yylval.number.type == INTEGER){
-                    printf("%s\t%d\tNUMBER\tINTEGER\t%lld\t%s\n", fileName, lineNumber, yylval.number.value,numberNotesText[yylval.number.note]); 
-                }else if(yylval.number.type ==REAL){
-                    printf("%s\t%d\tNUMBER\tREAL\t%Lg\t%s\n", fileName, lineNumber, yylval.number.fValue, numberNotesText[yylval.number.note]); 
-                }
-                break;
-            case INDSEL ... _IMAGINARY:
-                printf("%s\t%d\t%s\n", fileName, lineNumber, enum_TokenName[t - IDENT]); 
-                break;
-            case 0 ... 255: 
-                printf("%s\t%d\t%c\n", fileName, lineNumber, t); 
-                break;
-            case IDENT:
-                printf("%s\t%d\tIDENT\t%s\n", fileName, lineNumber, yylval.string_literal);
-                break;
-            case STRING:
-                printf("%s\t%d\tSTRING\t", fileName, lineNumber);
-                printBytes(yylval.string_literal);
-                printf("\n");
-                break;
-            case CHARLIT:
-                printf("%s\t%d\tCHARLIT\t", fileName, lineNumber);
-                printBytes(yylval.string_literal);
-                printf("\n");
-                break;
-            default:
-                break;
-        }
-    }
-    return 0;
+//         switch(t){
+//             case NUMBER:
+//                 if(yylval.number.type == INTEGER){
+//                     printf("%s\t%d\tNUMBER\tINTEGER\t%lld\t%s\n", fileName, lineNumber, yylval.number.value,numberNotesText[yylval.number.note]); 
+//                 }else if(yylval.number.type ==REAL){
+//                     printf("%s\t%d\tNUMBER\tREAL\t%Lg\t%s\n", fileName, lineNumber, yylval.number.fValue, numberNotesText[yylval.number.note]); 
+//                 }
+//                 break;
+//             case INDSEL ... _IMAGINARY:
+//                 printf("%s\t%d\t%s\n", fileName, lineNumber, enum_TokenName[t - IDENT]); 
+//                 break;
+//             case 0 ... 255: 
+//                 printf("%s\t%d\t%c\n", fileName, lineNumber, t); 
+//                 break;
+//             case IDENT:
+//                 printf("%s\t%d\tIDENT\t%s\n", fileName, lineNumber, yylval.string_literal);
+//                 break;
+//             case STRING:
+//                 printf("%s\t%d\tSTRING\t", fileName, lineNumber);
+//                 printBytes(yylval.string_literal);
+//                 printf("\n");
+//                 break;
+//             case CHARLIT:
+//                 printf("%s\t%d\tCHARLIT\t", fileName, lineNumber);
+//                 printBytes(yylval.string_literal);
+//                 printf("\n");
+//                 break;
+//             default:
+//                 break;
+//         }
+//     }
+//     return 0;
     
-}
+// }

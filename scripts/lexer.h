@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "tokens-manual.h"
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
@@ -7,8 +6,6 @@
 #define MAXSTRING 2000
 #define ESCAPENUMBER 12
 
-int lineNumber;
-char *fileName;
 
 struct numberType{
     long long int value;
@@ -17,16 +14,16 @@ struct numberType{
     int note;
 };
 
-typedef union
-{
-    char *string_literal;
-    int integer;
-    struct numberType number;
-} YYSTYPE;
+// typedef union
+// {
+//     char *string_literal;
+//     int integer;
+//     struct numberType number;
+// } YYSTYPE;
 
 typedef unsigned char BYTE;
 
-extern YYSTYPE yylval;
+// extern YYSTYPE yylval;
 
 enum numberTypes{
 	INTEGER,
